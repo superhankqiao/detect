@@ -1,0 +1,125 @@
+## 1.load packages ####
+library(xgboost)
+library(shapviz)
+library(ggplot2)
+library(readxl)
+library(tidyverse)
+library(Matrix)  
+
+## 2.read data ####
+dt <- read_excel("features.examples.xlsx")
+str(dt)
+dt <- as.data.frame(dt)
+dt[,2:11] <- lapply(dt[,2:11], factor)
+
+## 2.1 divide dataset, TrainingData(700) and TestData(299).
+set.seed(0)  
+s = sample(999,700)  
+TrainingData = dt[s,]  
+TestData = dt[-s,]
+
+TrainingData.Y <- TrainingData[,1]
+TrainingData.overhead <- TrainingData[,2:6]
+TrainingData.horizontal <- TrainingData[,7:11]
+TrainingData.final <- TrainingData[,c(2,3:5)]
+
+TestData.Y <- TestData[,1]
+TestData.overhead <- TestData[,2:6]
+TestData.horizontal <- TestData[,7:11]
+TestData.final <- TestData[,c(2,3:5)]
+
+## 3 overhead perspective model    ####
+dtrain.overhead <- xgb.DMatrix(data.matrix(TrainingData.overhead), 
+                               label=TrainingData.Y)
+dtest.overhead <- xgb.DMatrix(data.matrix(TestData.overhead), 
+                               label=TestData.Y)
+
+fit.overhead <- xgb.train(
+  params = list(learning_rate = 0.1, objective = "binary:logistic"),
+  data = dtrain.overhead,
+  nrounds = 65L)
+
+pre_xgb = round(predict(fit.overhead,newdata = dtest.overhead))  
+(test.overhead <- table(TestData.Y,pre_xgb,dnn=c("true","pre")))
+(Accuracy.test.overhead = sum(diag(test.overhead))/nrow(TestData.overhead))
+(Recall.test.overhead = test.overhead[1,1]/(test.overhead[1,1]+
+                                              test.overhead[1,2]))
+(Precision.test.overhead = test.overhead[1,1]/(test.overhead[1,1]+
+                                                 test.overhead[2,1]))
+(F1 <- 2*Precision.test.overhead*Recall.test.overhead/(Precision.test.overhead+
+                                                         Recall.test.overhead))
+
+shp <- shapviz(fit.overhead, 
+               X_pred = data.matrix(TestData.overhead),
+               X = TestData.overhead)
+
+sv_importance(shp,show_numbers = TRUE)+
+  theme_bw()
+
+sv_importance(shp, kind = "beeswarm")+
+  theme_bw()
+
+
+
+
+
+## 4 horizontal perspective model    ####
+dtrain.horizontal <- xgb.DMatrix(data.matrix(TrainingData.horizontal), 
+                                 label=TrainingData.Y)
+dtest.horizontal <- xgb.DMatrix(data.matrix(TestData.horizontal), 
+                                label=TestData.Y)
+
+fit.horizontal <- xgb.train(
+  params = list(learning_rate = 0.1, objective = "binary:logistic"),
+  data = dtrain.horizontal,
+  nrounds = 65L)
+
+pre_xgb = round(predict(fit.horizontal,newdata = dtest.horizontal))  
+(test.horizontal <- table(TestData.Y,pre_xgb,dnn=c("true","pre")))
+(Accuracy.test.horizontal = sum(diag(test.horizontal))/nrow(TestData.horizontal))
+(Recall.test.horizontal = test.horizontal[1,1]/(test.horizontal[1,1]+
+                                                  test.horizontal[1,2]))
+(Precision.test.horizontal = test.horizontal[1,1]/(test.horizontal[1,1]+
+                                                     test.horizontal[2,1]))
+(F1 <- 2*Precision.test.horizontal*Recall.test.horizontal/(Precision.test.horizontal+
+                                                             Recall.test.horizontal))
+
+shp <- shapviz(fit.horizontal, 
+               X_pred = data.matrix(TestData.horizontal),
+               X = TestData.horizontal)
+
+sv_importance(shp,show_numbers = TRUE)+
+  theme_bw()
+
+sv_importance(shp, kind = "beeswarm")+
+  theme_bw()
+## 5 final perspective model    ####
+dtrain.final <- xgb.DMatrix(data.matrix(TrainingData.final), 
+                            label=TrainingData.Y)
+dtest.final <- xgb.DMatrix(data.matrix(TestData.final), 
+                           label=TestData.Y)
+
+fit.final <- xgb.train(
+  params = list(learning_rate = 0.1, objective = "binary:logistic"),
+  data = dtrain.final,
+  nrounds = 65L)
+
+pre_xgb = round(predict(fit.final,newdata = dtest.final))  
+(test.final <- table(TestData.Y,pre_xgb,dnn=c("true","pre")))
+(Accuracy.test.final = sum(diag(test.final))/nrow(TestData.final))
+(Recall.test.final = test.final[1,1]/(test.final[1,1]+
+                                        test.final[1,2]))
+(Precision.test.final = test.final[1,1]/(test.final[1,1]+
+                                           test.final[2,1]))
+(F1 <- 2*Precision.test.final*Recall.test.final/(Precision.test.final+
+                                                   Recall.test.final))
+
+shp <- shapviz(fit.final, 
+               X_pred = data.matrix(TestData.final),
+               X = TestData.final)
+
+sv_importance(shp,show_numbers = TRUE)+
+  theme_bw()
+
+sv_importance(shp, kind = "beeswarm")+
+  theme_bw()
